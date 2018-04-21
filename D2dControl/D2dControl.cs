@@ -17,15 +17,13 @@ namespace D2dControl {
         private SharpDX.Direct3D11.Device device         ;
         private Texture2D                 renderTarget   ;
         private Dx11ImageSource           d3DSurface     ;
-        private RenderTarget              d2DRenderTarget;
-        private SharpDX.Direct2D1.Factory d2DFactory     ;
+        private SharpDX.Direct2D1.DeviceContext              d2DRenderTarget;
 
         private readonly Stopwatch renderTimer = new Stopwatch();
 
         protected ResourceCache resCache = new ResourceCache();
 
         private long lastFrameTime       = 0;
-        private long lastRenderTime      = 0;
         private int  frameCount          = 0;
         private int  frameCountHistTotal = 0;
         private Queue<int> frameCountHist = new Queue<int>();
@@ -54,6 +52,12 @@ namespace D2dControl {
             protected set { SetValue( FpsPropertyKey, value ); }
         }
 
+        public static readonly DependencyPropertyKey FrameTimePropertyKey = DependencyProperty.RegisterReadOnly("FrameTime", typeof(double), typeof(D2dControl), new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.None));
+        public double FrameTime {
+            get { return (double)GetValue( FrameTimePropertyKey.DependencyProperty ); }
+            protected set { SetValue( FrameTimePropertyKey, value ); }
+        }
+
         public static DependencyProperty RenderWaitProperty = DependencyProperty.Register(
             "RenderWait",
             typeof(int),
@@ -75,7 +79,7 @@ namespace D2dControl {
             base.Stretch = System.Windows.Media.Stretch.Fill;
         }
 
-        public abstract void Render( RenderTarget target );
+        public abstract void Render( SharpDX.Direct2D1.DeviceContext target );
 
         // - event handler ---------------------------------------------------------------
 
@@ -92,7 +96,11 @@ namespace D2dControl {
             if ( D2dControl.IsInDesignMode ) {
                 return;
             }
+            Shutdown();
+        }
 
+        protected void Shutdown()
+        {
             StopRendering();
             EndD3D();
         }
@@ -104,8 +112,6 @@ namespace D2dControl {
 
             PrepareAndCallRender();
             d3DSurface.InvalidateD3DImage();
-
-            lastRenderTime = renderTimer.ElapsedMilliseconds;
         }
 
         protected override void OnRenderSizeChanged( SizeChangedInfo sizeInfo ) {
@@ -144,17 +150,17 @@ namespace D2dControl {
             base.Source = null;
 
             Disposer.SafeDispose( ref d2DRenderTarget );
-            Disposer.SafeDispose( ref d2DFactory );
             Disposer.SafeDispose( ref d3DSurface );
             Disposer.SafeDispose( ref renderTarget );
             Disposer.SafeDispose( ref device );
+
+
         }
 
         private void CreateAndBindTargets() {
             d3DSurface.SetRenderTarget( null );
 
             Disposer.SafeDispose( ref d2DRenderTarget );
-            Disposer.SafeDispose( ref d2DFactory );
             Disposer.SafeDispose( ref renderTarget );
 
             var width  = Math.Max((int)ActualWidth , 100);
@@ -176,15 +182,25 @@ namespace D2dControl {
             renderTarget = new Texture2D( device, renderDesc );
 
             var surface = renderTarget.QueryInterface<Surface>();
+            
+            d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties()
+            {
+                Options = DeviceContextOptions.None,
+#if DEBUG
+                DebugLevel = DebugLevel.Information,
+#endif
+            });
 
-            d2DFactory = new SharpDX.Direct2D1.Factory();
-            var rtp = new RenderTargetProperties(new PixelFormat(Format.Unknown, SharpDX.Direct2D1.AlphaMode.Premultiplied));
-            d2DRenderTarget = new RenderTarget( d2DFactory, surface, rtp );
             resCache.RenderTarget = d2DRenderTarget;
 
             d3DSurface.SetRenderTarget( renderTarget );
 
             device.ImmediateContext.Rasterizer.SetViewport( 0, 0, width, height, 0.0f, 1.0f );
+            TargetsCreated();
+        }
+
+        protected virtual void TargetsCreated()
+        {
         }
 
         private void StartRendering() {
@@ -205,14 +221,18 @@ namespace D2dControl {
             renderTimer.Stop();
         }
 
+        private Stopwatch frameTimer = new Stopwatch();
+        private FrameTimeHelper _timeHelper = new FrameTimeHelper(60);
         private void PrepareAndCallRender() {
             if ( device == null ) {
                 return;
             }
-
+            
+            frameTimer.Restart();
             d2DRenderTarget.BeginDraw();
             Render( d2DRenderTarget );
             d2DRenderTarget.EndDraw();
+            FrameTime =_timeHelper.Push(frameTimer.Elapsed.TotalMilliseconds);
 
             CalcFps();
 

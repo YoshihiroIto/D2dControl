@@ -66,6 +66,7 @@
     <Compile Include="D2dControl.cs" />
     <Compile Include="Disposer.cs" />
     <Compile Include="Dx11ImageSource.cs" />
+    <Compile Include="FrameTimeHelper.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ResourceCache.cs" />
