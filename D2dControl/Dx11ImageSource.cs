@@ -7,51 +7,39 @@ namespace D2dControl {
     class Dx11ImageSource : D3DImage, IDisposable {
 
         // - field -----------------------------------------------------------------------
-
-        private static int        ActiveClients;
-        private static Direct3DEx D3DContext;
-        private static DeviceEx   D3DDevice;
+        
+        private Direct3DEx D3DContext;
+        private DeviceEx   D3DDevice;
 
         private Texture renderTarget;
-
-        // - property --------------------------------------------------------------------
-
-        public int RenderWait { get; set; } = 2; // default: 2ms
 
         // - public methods --------------------------------------------------------------
 
         public Dx11ImageSource() {
             StartD3D();
-            Dx11ImageSource.ActiveClients++;
         }
 
         public void Dispose() {
             SetRenderTarget( null );
 
             Disposer.SafeDispose( ref renderTarget );
-
-            Dx11ImageSource.ActiveClients--;
+            
             EndD3D();
         }
 
         public void InvalidateD3DImage() {
             if( renderTarget != null ) {
-                base.Lock();
-                if( RenderWait != 0 ) {
-                    Thread.Sleep( RenderWait );
-                }
                 base.AddDirtyRect( new System.Windows.Int32Rect( 0, 0, base.PixelWidth, base.PixelHeight ) );
-                base.Unlock();
             }
         }
 
         public void SetRenderTarget( SharpDX.Direct3D11.Texture2D target ) {
             if( renderTarget != null ) {
-                renderTarget = null;
-
                 base.Lock();
                 base.SetBackBuffer( D3DResourceType.IDirect3DSurface9, IntPtr.Zero );
                 base.Unlock();
+                
+                Disposer.SafeDispose( ref renderTarget );
             }
 
             if( target == null ) {
@@ -73,7 +61,7 @@ namespace D2dControl {
                 throw new ArgumentException( "Invalid handle" );
             }
 
-            renderTarget = new Texture( Dx11ImageSource.D3DDevice, target.Description.Width, target.Description.Height, 1, Usage.RenderTarget, format, Pool.Default, ref handle );
+            renderTarget = new Texture( D3DDevice, target.Description.Width, target.Description.Height, 1, Usage.RenderTarget, format, Pool.Default, ref handle );
 
             using( var surface = renderTarget.GetSurfaceLevel( 0 ) ) {
                 base.Lock();
@@ -85,34 +73,18 @@ namespace D2dControl {
         // - private methods -------------------------------------------------------------
 
         private void StartD3D() {
-            if( Dx11ImageSource.ActiveClients != 0 ) {
-                return;
-            }
 
             var presentParams = GetPresentParameters();
             var createFlags    = CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded | CreateFlags.FpuPreserve;
 
-            Dx11ImageSource.D3DContext = new Direct3DEx();
-            Dx11ImageSource.D3DDevice  = new DeviceEx( D3DContext, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams );
+            D3DContext = new Direct3DEx();
+            D3DDevice  = new DeviceEx( D3DContext, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams );
         }
 
         private void EndD3D() {
-            if( Dx11ImageSource.ActiveClients != 0 ) {
-                return;
-            }
-
             Disposer.SafeDispose( ref renderTarget );
-            Disposer.SafeDispose( ref Dx11ImageSource.D3DDevice );
-            Disposer.SafeDispose( ref Dx11ImageSource.D3DContext );
-        }
-
-        private static void ResetD3D() {
-            if( Dx11ImageSource.ActiveClients == 0 ) {
-                return;
-            }
-
-            var presentParams = GetPresentParameters();
-            Dx11ImageSource.D3DDevice.ResetEx( ref presentParams );
+            Disposer.SafeDispose( ref D3DDevice );
+            Disposer.SafeDispose( ref D3DContext );
         }
 
         private static PresentParameters GetPresentParameters() {

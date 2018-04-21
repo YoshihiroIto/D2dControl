@@ -15,7 +15,8 @@ namespace D2dControl {
         // - field -----------------------------------------------------------------------
 
         private SharpDX.Direct3D11.Device device         ;
-        private Texture2D                 renderTarget   ;
+        private Texture2D                 sharedTarget   ;
+        private Texture2D                 dx11Target     ;
         private Dx11ImageSource           d3DSurface     ;
         private SharpDX.Direct2D1.DeviceContext              d2DRenderTarget;
 
@@ -58,18 +59,6 @@ namespace D2dControl {
             protected set { SetValue( FrameTimePropertyKey, value ); }
         }
 
-        public static DependencyProperty RenderWaitProperty = DependencyProperty.Register(
-            "RenderWait",
-            typeof(int),
-            typeof(D2dControl),
-            new FrameworkPropertyMetadata( 2, OnRenderWaitChanged )
-            );
-
-        public int RenderWait {
-            get { return (int)GetValue( RenderWaitProperty ); }
-            set { SetValue( RenderWaitProperty, value ); }
-        }
-
         // - public methods --------------------------------------------------------------
 
         public D2dControl() {
@@ -109,9 +98,14 @@ namespace D2dControl {
             if ( !renderTimer.IsRunning ) {
                 return;
             }
-
+            
+            frameTimer.Restart();
             PrepareAndCallRender();
+            d3DSurface.Lock();
+            device.ImmediateContext.ResolveSubresource(dx11Target, 0, sharedTarget, 0, Format.B8G8R8A8_UNorm);
             d3DSurface.InvalidateD3DImage();
+            d3DSurface.Unlock();
+            FrameTime =_timeHelper.Push(frameTimer.Elapsed.TotalMilliseconds);
         }
 
         protected override void OnRenderSizeChanged( SizeChangedInfo sizeInfo ) {
@@ -127,15 +121,14 @@ namespace D2dControl {
             }
         }
 
-        private static void OnRenderWaitChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
-            var control = (D2dControl)d;
-            control.d3DSurface.RenderWait = (int)e.NewValue;
-        }
-
         // - private methods -------------------------------------------------------------
 
         private void StartD3D() {
-            device = new SharpDX.Direct3D11.Device( DriverType.Hardware, DeviceCreationFlags.BgraSupport );
+            device = new SharpDX.Direct3D11.Device( DriverType.Hardware, DeviceCreationFlags.BgraSupport |
+#if DEBUG
+                                                                         DeviceCreationFlags.Debug |
+#endif
+                                                                         DeviceCreationFlags.None);
 
             d3DSurface = new Dx11ImageSource();
             d3DSurface.IsFrontBufferAvailableChanged += OnIsFrontBufferAvailableChanged;
@@ -151,22 +144,22 @@ namespace D2dControl {
 
             Disposer.SafeDispose( ref d2DRenderTarget );
             Disposer.SafeDispose( ref d3DSurface );
-            Disposer.SafeDispose( ref renderTarget );
+            Disposer.SafeDispose( ref sharedTarget );
+            Disposer.SafeDispose( ref dx11Target );
             Disposer.SafeDispose( ref device );
-
-
         }
 
         private void CreateAndBindTargets() {
             d3DSurface.SetRenderTarget( null );
 
             Disposer.SafeDispose( ref d2DRenderTarget );
-            Disposer.SafeDispose( ref renderTarget );
+            Disposer.SafeDispose( ref sharedTarget );
+            Disposer.SafeDispose( ref dx11Target );
 
             var width  = Math.Max((int)ActualWidth , 100);
             var height = Math.Max((int)ActualHeight, 100);
 
-            var renderDesc = new Texture2DDescription {
+            var frontDesc = new Texture2DDescription {
                 BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
                 Format = Format.B8G8R8A8_UNorm,
                 Width = width,
@@ -179,21 +172,37 @@ namespace D2dControl {
                 ArraySize = 1
             };
 
-            renderTarget = new Texture2D( device, renderDesc );
+            var backDesc = new Texture2DDescription {
+                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
+                Format = Format.B8G8R8A8_UNorm,
+                Width = width,
+                Height = height,
+                MipLevels = 1,
+                SampleDescription = new SampleDescription(1, 0),
+                Usage = ResourceUsage.Default,
+                OptionFlags = ResourceOptionFlags.None,
+                CpuAccessFlags = CpuAccessFlags.None,
+                ArraySize = 1
+            };
 
-            var surface = renderTarget.QueryInterface<Surface>();
-            
-            d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties()
+            sharedTarget = new Texture2D( device, frontDesc );
+            dx11Target = new Texture2D( device, backDesc );
+
+            using (var surface = dx11Target.QueryInterface<Surface>())
             {
-                Options = DeviceContextOptions.None,
+
+                d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties()
+                {
+                    Options = DeviceContextOptions.None,
 #if DEBUG
-                DebugLevel = DebugLevel.Information,
+                    DebugLevel = DebugLevel.Information,
 #endif
-            });
+                });
+            }
 
             resCache.RenderTarget = d2DRenderTarget;
 
-            d3DSurface.SetRenderTarget( renderTarget );
+            d3DSurface.SetRenderTarget( sharedTarget );
 
             device.ImmediateContext.Rasterizer.SetViewport( 0, 0, width, height, 0.0f, 1.0f );
             TargetsCreated();
@@ -228,11 +237,9 @@ namespace D2dControl {
                 return;
             }
             
-            frameTimer.Restart();
             d2DRenderTarget.BeginDraw();
             Render( d2DRenderTarget );
             d2DRenderTarget.EndDraw();
-            FrameTime =_timeHelper.Push(frameTimer.Elapsed.TotalMilliseconds);
 
             CalcFps();
 
