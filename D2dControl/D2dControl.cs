@@ -193,10 +193,11 @@ namespace D2dControl {
 
                 d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties()
                 {
-                    Options = DeviceContextOptions.None,
+                    Options = DeviceContextOptions.EnableMultithreadedOptimizations,
 #if DEBUG
                     DebugLevel = DebugLevel.Information,
 #endif
+                    ThreadingMode = ThreadingMode.SingleThreaded
                 });
             }
 
