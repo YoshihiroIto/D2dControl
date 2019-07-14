@@ -1,19 +1,18 @@
-﻿using SharpDX;
-using SharpDX.Direct2D1;
+﻿using SharpDX.Direct2D1;
 using SharpDX.Mathematics.Interop;
 using System;
 
 namespace Sample {
     class SampleControl : D2dControl.D2dControl {
 
-        private float x = 0;
-        private float y = 0;
+        private float x;
+        private float y;
         private float w = 10;
         private float h = 10;
         private float dx = 1;
         private float dy = 1;
 
-        private Random rnd = new Random();
+        private readonly Random rnd = new Random();
 
         public SampleControl() {
             ResCache.Add( "RedBrush"  , t => new SolidColorBrush( t, new RawColor4( 1.0f, 0.0f, 0.0f, 1.0f ) ) );

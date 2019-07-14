@@ -10,12 +10,12 @@
     Height="350"
     mc:Ignorable="d">
     <Grid>
-        <local:SampleControl x:Name="sampleControl" />
+        <local:SampleControl x:Name="SampleControl" />
         <Label
-            x:Name="label"
+            x:Name="Label"
             Margin="10,10,0,0"
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
-            Content="{Binding ElementName=sampleControl, Path=Fps}" />
+            Content="{Binding ElementName=SampleControl, Path=Fps}" />
     </Grid>
 </Window>
