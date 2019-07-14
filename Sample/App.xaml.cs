@@ -1,4 +1,5 @@
-﻿namespace Sample {
+﻿namespace Sample
+{
     /// <summary>
     /// App.xaml の相互作用ロジック
     /// </summary>
