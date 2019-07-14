@@ -7,8 +7,8 @@ namespace D2dControl {
 
         // - field -----------------------------------------------------------------------
         
-        private Direct3DEx D3DContext;
-        private DeviceEx   D3DDevice;
+        private Direct3DEx d3DContext;
+        private DeviceEx   d3DDevice;
 
         private Texture renderTarget;
 
@@ -60,7 +60,7 @@ namespace D2dControl {
                 throw new ArgumentException( "Invalid handle" );
             }
 
-            renderTarget = new Texture( D3DDevice, target.Description.Width, target.Description.Height, 1, Usage.RenderTarget, format, Pool.Default, ref handle );
+            renderTarget = new Texture( d3DDevice, target.Description.Width, target.Description.Height, 1, Usage.RenderTarget, format, Pool.Default, ref handle );
 
             using( var surface = renderTarget.GetSurfaceLevel( 0 ) ) {
                 Lock();
@@ -76,14 +76,14 @@ namespace D2dControl {
             var presentParams = GetPresentParameters();
             var createFlags    = CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded | CreateFlags.FpuPreserve;
 
-            D3DContext = new Direct3DEx();
-            D3DDevice  = new DeviceEx( D3DContext, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams );
+            d3DContext = new Direct3DEx();
+            d3DDevice  = new DeviceEx( d3DContext, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams );
         }
 
         private void EndD3D() {
             Disposer.SafeDispose( ref renderTarget );
-            Disposer.SafeDispose( ref D3DDevice );
-            Disposer.SafeDispose( ref D3DContext );
+            Disposer.SafeDispose( ref d3DDevice );
+            Disposer.SafeDispose( ref d3DContext );
         }
 
         private static PresentParameters GetPresentParameters() {
