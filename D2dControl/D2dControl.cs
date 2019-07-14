@@ -203,7 +203,7 @@ namespace D2dControl {
 
             d3DSurface.SetRenderTarget( sharedTarget );
 
-            device.ImmediateContext.Rasterizer.SetViewport( 0, 0, width, height, 0.0f, 1.0f );
+            device.ImmediateContext.Rasterizer.SetViewport( 0, 0, width, height );
             TargetsCreated();
         }
 
