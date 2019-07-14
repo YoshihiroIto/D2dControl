@@ -22,7 +22,7 @@ namespace D2dControl {
 
         private readonly Stopwatch renderTimer = new Stopwatch();
 
-        protected ResourceCache resCache = new ResourceCache();
+        protected ResourceCache ResCache = new ResourceCache();
 
         private long lastFrameTime       = 0;
         private int  frameCount          = 0;
@@ -201,7 +201,7 @@ namespace D2dControl {
                 });
             }
 
-            resCache.RenderTarget = d2DRenderTarget;
+            ResCache.RenderTarget = d2DRenderTarget;
 
             d3DSurface.SetRenderTarget( sharedTarget );
 
