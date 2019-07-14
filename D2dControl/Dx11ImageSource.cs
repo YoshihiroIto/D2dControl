@@ -6,14 +6,9 @@ namespace D2dControl
 {
     class Dx11ImageSource : D3DImage, IDisposable
     {
-        // - field -----------------------------------------------------------------------
-
         private Direct3DEx d3DContext;
         private DeviceEx d3DDevice;
-
         private Texture renderTarget;
-
-        // - public methods --------------------------------------------------------------
 
         public Dx11ImageSource()
         {
@@ -52,7 +47,7 @@ namespace D2dControl
             var format = TranslateFormat(target);
             var handle = GetSharedHandle(target);
 
-            if (!IsShareable(target))
+            if (IsShareable(target) == false)
                 throw new ArgumentException("Texture must be created with ResourceOptionFlags.Shared");
 
             if (format == Format.Unknown)
@@ -71,8 +66,6 @@ namespace D2dControl
                 Unlock();
             }
         }
-
-        // - private methods -------------------------------------------------------------
 
         private void StartD3D()
         {

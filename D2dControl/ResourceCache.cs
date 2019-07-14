@@ -6,15 +6,11 @@ namespace D2dControl
 {
     public class ResourceCache
     {
-        // - field -----------------------------------------------------------------------
-
         private readonly Dictionary<string, Func<RenderTarget, object>> generators =
             new Dictionary<string, Func<RenderTarget, object>>();
 
         private readonly Dictionary<string, object> resources = new Dictionary<string, object>();
         private RenderTarget renderTarget;
-
-        // - property --------------------------------------------------------------------
 
         public RenderTarget RenderTarget
         {
@@ -33,8 +29,6 @@ namespace D2dControl
         public Dictionary<string, object>.KeyCollection Keys => resources.Keys;
 
         public Dictionary<string, object>.ValueCollection Values => resources.Values;
-
-        // - public methods --------------------------------------------------------------
 
         public void Add(string key, Func<RenderTarget, object> gen)
         {
@@ -102,8 +96,6 @@ namespace D2dControl
         {
             return resources.TryGetValue(key, out res);
         }
-
-        // - private methods -------------------------------------------------------------
 
         private void UpdateResources()
         {

@@ -12,7 +12,7 @@ namespace D2dControl
 {
     public abstract class D2dControl : System.Windows.Controls.Image
     {
-        // - field -----------------------------------------------------------------------
+        protected readonly ResourceCache ResCache = new ResourceCache();
 
         private SharpDX.Direct3D11.Device device;
         private Texture2D sharedTarget;
@@ -20,16 +20,12 @@ namespace D2dControl
         private Dx11ImageSource d3DSurface;
         private SharpDX.Direct2D1.DeviceContext d2DRenderTarget;
 
-        private readonly Stopwatch renderTimer = new Stopwatch();
-
-        protected readonly ResourceCache ResCache = new ResourceCache();
-
         private long lastFrameTime;
         private int frameCount;
         private int frameCountHistTotal;
-        private readonly Queue<int> frameCountHist = new Queue<int>();
 
-        // - property --------------------------------------------------------------------
+        private readonly Queue<int> frameCountHist = new Queue<int>();
+        private readonly Stopwatch renderTimer = new Stopwatch();
 
         public static bool IsInDesignMode
         {
@@ -44,7 +40,7 @@ namespace D2dControl
         }
 
         private static readonly DependencyPropertyKey FpsPropertyKey = DependencyProperty.RegisterReadOnly(
-            "Fps",
+            nameof(Fps),
             typeof(int),
             typeof(D2dControl),
             new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.None)
@@ -59,7 +55,7 @@ namespace D2dControl
         }
 
         public static readonly DependencyPropertyKey FrameTimePropertyKey =
-            DependencyProperty.RegisterReadOnly("FrameTime", typeof(double), typeof(D2dControl),
+            DependencyProperty.RegisterReadOnly(nameof(FrameTime), typeof(double), typeof(D2dControl),
                 new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.None));
 
         public double FrameTime
@@ -67,8 +63,6 @@ namespace D2dControl
             get => (double) GetValue(FrameTimePropertyKey.DependencyProperty);
             protected set => SetValue(FrameTimePropertyKey, value);
         }
-
-        // - public methods --------------------------------------------------------------
 
         protected D2dControl()
         {
@@ -79,8 +73,6 @@ namespace D2dControl
         }
 
         public abstract void Render(SharpDX.Direct2D1.DeviceContext target);
-
-        // - event handler ---------------------------------------------------------------
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
@@ -107,21 +99,26 @@ namespace D2dControl
 
         private void OnRendering(object sender, EventArgs e)
         {
-            if (!renderTimer.IsRunning)
+            if (renderTimer.IsRunning == false)
                 return;
 
             frameTimer.Restart();
             PrepareAndCallRender();
+
             d3DSurface.Lock();
+
             device.ImmediateContext.ResolveSubresource(dx11Target, 0, sharedTarget, 0, Format.B8G8R8A8_UNorm);
             d3DSurface.InvalidateD3DImage();
+
             d3DSurface.Unlock();
+
             FrameTime = timeHelper.Push(frameTimer.Elapsed.TotalMilliseconds);
         }
 
         protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
         {
             CreateAndBindTargets();
+
             base.OnRenderSizeChanged(sizeInfo);
         }
 
@@ -132,8 +129,6 @@ namespace D2dControl
             else
                 StopRendering();
         }
-
-        // - private methods -------------------------------------------------------------
 
         private void StartD3D()
         {
@@ -240,7 +235,7 @@ namespace D2dControl
 
         private void StopRendering()
         {
-            if (!renderTimer.IsRunning)
+            if (renderTimer.IsRunning == false)
                 return;
 
             System.Windows.Media.CompositionTarget.Rendering -= OnRendering;
@@ -272,10 +267,9 @@ namespace D2dControl
             {
                 frameCountHist.Enqueue(frameCount);
                 frameCountHistTotal += frameCount;
+
                 if (frameCountHist.Count > 5)
-                {
                     frameCountHistTotal -= frameCountHist.Dequeue();
-                }
 
                 Fps = frameCountHistTotal / frameCountHist.Count;
 
