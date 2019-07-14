@@ -87,12 +87,13 @@ namespace D2dControl {
         }
 
         private static PresentParameters GetPresentParameters() {
-            var presentParams = new PresentParameters();
-
-            presentParams.Windowed             = true;
-            presentParams.SwapEffect           = SwapEffect.Discard;
-            presentParams.DeviceWindowHandle   = NativeMethods.GetDesktopWindow();
-            presentParams.PresentationInterval = PresentInterval.Default;
+            var presentParams = new PresentParameters
+            {
+                Windowed = true,
+                SwapEffect = SwapEffect.Discard,
+                DeviceWindowHandle = NativeMethods.GetDesktopWindow(),
+                PresentationInterval = PresentInterval.Default
+            };
 
             return presentParams;
         }
