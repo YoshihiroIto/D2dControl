@@ -5,21 +5,21 @@ namespace D2dControl
 {
     internal class FrameTimeHelper
     {
-        private readonly int _depth;
-        private readonly Queue<double> _queue;
+        private readonly int depth;
+        private readonly Queue<double> queue;
 
         public FrameTimeHelper(int depth)
         {
-            _depth = depth;
-            _queue = new Queue<double>(_depth + 1);
+            this.depth = depth;
+            queue = new Queue<double>(this.depth + 1);
         }
 
         public double Push(double item)
         {
-            _queue.Enqueue(item);
-            if (_queue.Count > _depth) _queue.Dequeue();
+            queue.Enqueue(item);
+            if (queue.Count > depth) queue.Dequeue();
 
-            return _queue.Average();
+            return queue.Average();
         }
     }
 }

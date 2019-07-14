@@ -6,9 +6,9 @@ namespace D2dControl {
     public class ResourceCache {
         // - field -----------------------------------------------------------------------
 
-        private Dictionary<string, Func<RenderTarget, object>> generators = new Dictionary<string, Func<RenderTarget, object>>();
-        private Dictionary<string, object> resources = new Dictionary<string, object>();
-        private RenderTarget renderTarget = null;
+        private readonly Dictionary<string, Func<RenderTarget, object>> generators = new Dictionary<string, Func<RenderTarget, object>>();
+        private readonly Dictionary<string, object> resources = new Dictionary<string, object>();
+        private RenderTarget renderTarget;
             
         // - property --------------------------------------------------------------------
             

@@ -1,5 +1,4 @@
-﻿using SharpDX;
-using SharpDX.Direct2D1;
+﻿using SharpDX.Direct2D1;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -8,7 +7,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
-using System.Windows.Threading;
 
 namespace D2dControl {
     public abstract class D2dControl : System.Windows.Controls.Image {
@@ -24,10 +22,10 @@ namespace D2dControl {
 
         protected ResourceCache ResCache = new ResourceCache();
 
-        private long lastFrameTime       = 0;
-        private int  frameCount          = 0;
-        private int  frameCountHistTotal = 0;
-        private Queue<int> frameCountHist = new Queue<int>();
+        private long lastFrameTime;
+        private int  frameCount;
+        private int  frameCountHistTotal;
+        private readonly Queue<int> frameCountHist = new Queue<int>();
 
         // - property --------------------------------------------------------------------
 
@@ -105,7 +103,7 @@ namespace D2dControl {
             device.ImmediateContext.ResolveSubresource(dx11Target, 0, sharedTarget, 0, Format.B8G8R8A8_UNorm);
             d3DSurface.InvalidateD3DImage();
             d3DSurface.Unlock();
-            FrameTime =_timeHelper.Push(frameTimer.Elapsed.TotalMilliseconds);
+            FrameTime =timeHelper.Push(frameTimer.Elapsed.TotalMilliseconds);
         }
 
         protected override void OnRenderSizeChanged( SizeChangedInfo sizeInfo ) {
@@ -231,8 +229,8 @@ namespace D2dControl {
             renderTimer.Stop();
         }
 
-        private Stopwatch frameTimer = new Stopwatch();
-        private FrameTimeHelper _timeHelper = new FrameTimeHelper(60);
+        private readonly Stopwatch frameTimer = new Stopwatch();
+        private readonly FrameTimeHelper timeHelper = new FrameTimeHelper(60);
         private void PrepareAndCallRender() {
             if ( device == null ) {
                 return;
