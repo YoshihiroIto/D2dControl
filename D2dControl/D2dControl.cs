@@ -72,8 +72,8 @@ namespace D2dControl
 
         protected D2dControl()
         {
-            Loaded += Window_Loaded;
-            Unloaded += Window_Closing;
+            Loaded += OnLoaded;
+            Unloaded += OnClosing;
 
             Stretch = System.Windows.Media.Stretch.Fill;
         }
@@ -82,7 +82,7 @@ namespace D2dControl
 
         // - event handler ---------------------------------------------------------------
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private void OnLoaded(object sender, RoutedEventArgs e)
         {
             if (IsInDesignMode)
                 return;
@@ -91,7 +91,7 @@ namespace D2dControl
             StartRendering();
         }
 
-        private void Window_Closing(object sender, RoutedEventArgs e)
+        private void OnClosing(object sender, RoutedEventArgs e)
         {
             if (IsInDesignMode)
                 return;
