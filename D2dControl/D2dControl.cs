@@ -59,7 +59,7 @@ namespace D2dControl {
 
         // - public methods --------------------------------------------------------------
 
-        public D2dControl() {
+        protected D2dControl() {
             base.Loaded   += Window_Loaded;
             base.Unloaded += Window_Closing;
 
