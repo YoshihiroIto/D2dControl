@@ -13,25 +13,17 @@ namespace D2dControl {
         // - property --------------------------------------------------------------------
             
         public RenderTarget RenderTarget {
-            get { return renderTarget; }
+            get => renderTarget;
             set { renderTarget = value;  UpdateResources(); }
         }
 
-        public int Count {
-            get { return resources.Count; }
-        }
+        public int Count => resources.Count;
 
-        public object this[string key] {
-            get { return resources[key]; }
-        }
+        public object this[string key] => resources[key];
 
-        public Dictionary<string, object>.KeyCollection Keys {
-            get { return resources.Keys; }
-        }
+        public Dictionary<string, object>.KeyCollection Keys => resources.Keys;
 
-        public Dictionary<string, object>.ValueCollection Values {
-            get { return resources.Values; }
-        }
+        public Dictionary<string, object>.ValueCollection Values => resources.Values;
 
         // - public methods --------------------------------------------------------------
 

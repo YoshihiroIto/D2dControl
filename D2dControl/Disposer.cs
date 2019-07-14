@@ -7,11 +7,13 @@ namespace D2dControl {
                 return;
             }
 
-            var disposer = resource as IDisposable;
-            if ( disposer != null ) {
+            if ( resource is IDisposable disposer ) {
                 try {
                     disposer.Dispose();
-                } catch {
+                }
+                catch
+                {
+                    // ignored
                 }
             }
 

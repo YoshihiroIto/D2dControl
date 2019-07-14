@@ -47,14 +47,14 @@ namespace D2dControl {
         public static readonly DependencyProperty FpsProperty = FpsPropertyKey.DependencyProperty;
 
         public int Fps {
-            get { return (int)GetValue( FpsProperty ); }
-            protected set { SetValue( FpsPropertyKey, value ); }
+            get => (int)GetValue( FpsProperty );
+            protected set => SetValue( FpsPropertyKey, value );
         }
 
         public static readonly DependencyPropertyKey FrameTimePropertyKey = DependencyProperty.RegisterReadOnly("FrameTime", typeof(double), typeof(D2dControl), new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.None));
         public double FrameTime {
-            get { return (double)GetValue( FrameTimePropertyKey.DependencyProperty ); }
-            protected set { SetValue( FrameTimePropertyKey, value ); }
+            get => (double)GetValue( FrameTimePropertyKey.DependencyProperty );
+            protected set => SetValue( FrameTimePropertyKey, value );
         }
 
         // - public methods --------------------------------------------------------------
