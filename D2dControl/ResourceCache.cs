@@ -28,8 +28,7 @@ namespace D2dControl {
         // - public methods --------------------------------------------------------------
 
         public void Add( string key, Func<RenderTarget, object> gen ) {
-            object resOld;
-            if ( resources.TryGetValue( key, out resOld ) ) {
+            if ( resources.TryGetValue( key, out var resOld ) ) {
                 Disposer.SafeDispose( ref resOld );
                 generators.Remove( key );
                 resources.Remove( key );
@@ -67,8 +66,7 @@ namespace D2dControl {
         }
 
         public bool Remove( string key ) {
-            object res;
-            if ( resources.TryGetValue( key, out res ) ) {
+            if ( resources.TryGetValue( key, out var res ) ) {
                 Disposer.SafeDispose( ref res );
                 generators.Remove( key );
                 resources.Remove( key );
@@ -92,8 +90,7 @@ namespace D2dControl {
                 var gen = g.Value;
                 var res = gen( renderTarget );
 
-                object resOld;
-            	if ( resources.TryGetValue( key, out resOld ) ) {
+                if ( resources.TryGetValue( key, out var resOld ) ) {
             	    Disposer.SafeDispose( ref resOld );
                     resources.Remove( key );
                 }
