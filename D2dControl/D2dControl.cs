@@ -160,6 +160,9 @@ namespace D2dControl
 
         private void CreateAndBindTargets()
         {
+            if (d3DSurface == null)
+                return;
+
             d3DSurface.SetRenderTarget(null);
 
             Disposer.SafeDispose(ref d2DRenderTarget);
