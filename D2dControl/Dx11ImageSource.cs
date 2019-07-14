@@ -49,11 +49,11 @@ namespace D2dControl {
             var handle = GetSharedHandle( target );
 
             if ( !IsShareable( target ) ) {
-                throw new ArgumentException( "Texture must be created with ResouceOptionFlags.Shared" );
+                throw new ArgumentException( "Texture must be created with ResourceOptionFlags.Shared" );
             }
 
             if ( format == Format.Unknown ) {
-                throw new ArgumentException( "Texture format is not compatible with OpenSharedResouce" );
+                throw new ArgumentException( "Texture format is not compatible with OpenSharedResource" );
             }
 
             if ( handle == IntPtr.Zero ) {
