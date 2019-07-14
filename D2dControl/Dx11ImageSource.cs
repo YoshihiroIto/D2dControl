@@ -1,6 +1,5 @@
 ﻿using SharpDX.Direct3D9;
 using System;
-using System.Threading;
 using System.Windows.Interop;
 
 namespace D2dControl {
@@ -29,15 +28,15 @@ namespace D2dControl {
 
         public void InvalidateD3DImage() {
             if( renderTarget != null ) {
-                base.AddDirtyRect( new System.Windows.Int32Rect( 0, 0, base.PixelWidth, base.PixelHeight ) );
+                AddDirtyRect( new System.Windows.Int32Rect( 0, 0, PixelWidth, PixelHeight ) );
             }
         }
 
         public void SetRenderTarget( SharpDX.Direct3D11.Texture2D target ) {
             if( renderTarget != null ) {
-                base.Lock();
-                base.SetBackBuffer( D3DResourceType.IDirect3DSurface9, IntPtr.Zero );
-                base.Unlock();
+                Lock();
+                SetBackBuffer( D3DResourceType.IDirect3DSurface9, IntPtr.Zero );
+                Unlock();
                 
                 Disposer.SafeDispose( ref renderTarget );
             }
@@ -46,7 +45,7 @@ namespace D2dControl {
                 return;
             }
 
-            var format = Dx11ImageSource.TranslateFormat( target );
+            var format = TranslateFormat( target );
             var handle = GetSharedHandle( target );
 
             if ( !IsShareable( target ) ) {
@@ -64,9 +63,9 @@ namespace D2dControl {
             renderTarget = new Texture( D3DDevice, target.Description.Width, target.Description.Height, 1, Usage.RenderTarget, format, Pool.Default, ref handle );
 
             using( var surface = renderTarget.GetSurfaceLevel( 0 ) ) {
-                base.Lock();
-                base.SetBackBuffer( D3DResourceType.IDirect3DSurface9, surface.NativePointer );
-                base.Unlock();
+                Lock();
+                SetBackBuffer( D3DResourceType.IDirect3DSurface9, surface.NativePointer );
+                Unlock();
             }
         }
 
@@ -106,10 +105,10 @@ namespace D2dControl {
 
         private static Format TranslateFormat( SharpDX.Direct3D11.Texture2D texture ) {
             switch( texture.Description.Format ) {
-                case SharpDX.DXGI.Format.R10G10B10A2_UNorm : return SharpDX.Direct3D9.Format.A2B10G10R10;
-                case SharpDX.DXGI.Format.R16G16B16A16_Float: return SharpDX.Direct3D9.Format.A16B16G16R16F;
-                case SharpDX.DXGI.Format.B8G8R8A8_UNorm    : return SharpDX.Direct3D9.Format.A8R8G8B8;
-                default                                    : return SharpDX.Direct3D9.Format.Unknown;
+                case SharpDX.DXGI.Format.R10G10B10A2_UNorm : return Format.A2B10G10R10;
+                case SharpDX.DXGI.Format.R16G16B16A16_Float: return Format.A16B16G16R16F;
+                case SharpDX.DXGI.Format.B8G8R8A8_UNorm    : return Format.A8R8G8B8;
+                default                                    : return Format.Unknown;
             }
         }
 

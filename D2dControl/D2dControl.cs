@@ -60,10 +60,10 @@ namespace D2dControl {
         // - public methods --------------------------------------------------------------
 
         protected D2dControl() {
-            base.Loaded   += Window_Loaded;
-            base.Unloaded += Window_Closing;
+            Loaded   += Window_Loaded;
+            Unloaded += Window_Closing;
 
-            base.Stretch = System.Windows.Media.Stretch.Fill;
+            Stretch = System.Windows.Media.Stretch.Fill;
         }
 
         public abstract void Render( SharpDX.Direct2D1.DeviceContext target );
@@ -71,7 +71,7 @@ namespace D2dControl {
         // - event handler ---------------------------------------------------------------
 
         private void Window_Loaded( object sender, RoutedEventArgs e ) {
-            if ( D2dControl.IsInDesignMode ) {
+            if ( IsInDesignMode ) {
                 return;
             }
 
@@ -80,7 +80,7 @@ namespace D2dControl {
         }
 
         private void Window_Closing( object sender, RoutedEventArgs e ) {
-            if ( D2dControl.IsInDesignMode ) {
+            if ( IsInDesignMode ) {
                 return;
             }
             Shutdown();
@@ -133,12 +133,12 @@ namespace D2dControl {
 
             CreateAndBindTargets();
 
-            base.Source = d3DSurface;
+            Source = d3DSurface;
         }
 
         private void EndD3D() {
             d3DSurface.IsFrontBufferAvailableChanged -= OnIsFrontBufferAvailableChanged;
-            base.Source = null;
+            Source = null;
 
             Disposer.SafeDispose( ref d2DRenderTarget );
             Disposer.SafeDispose( ref d3DSurface );
