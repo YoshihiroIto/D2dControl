@@ -22,7 +22,7 @@ namespace D2dControl
 
         private readonly Stopwatch renderTimer = new Stopwatch();
 
-        protected ResourceCache ResCache = new ResourceCache();
+        protected readonly ResourceCache ResCache = new ResourceCache();
 
         private long lastFrameTime;
         private int frameCount;
