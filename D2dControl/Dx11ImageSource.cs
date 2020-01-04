@@ -1,16 +1,33 @@
 ﻿using SharpDX.Direct3D9;
 using System;
 using System.Windows.Interop;
+using System.Runtime.InteropServices;
 
 namespace D2dControl
 {
-    class Dx11ImageSource : D3DImage, IDisposable
+    internal class Dx11ImageSource : D3DImage, IDisposable
     {
-        private Direct3DEx d3DContext;
-        private DeviceEx d3DDevice;
+        private static Direct3DEx d3DContext;
+        private static DeviceEx d3DDevice;
+
         private Texture renderTarget;
 
-        public Dx11ImageSource()
+        internal static void Initialize()
+        {
+            var presentParams = GetPresentParameters();
+            var createFlags = CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded | CreateFlags.FpuPreserve;
+
+            d3DContext = new Direct3DEx();
+            d3DDevice = new DeviceEx(d3DContext, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams);
+        }
+
+        internal static void Destroy()
+        {
+            Disposer.SafeDispose(ref d3DDevice);
+            Disposer.SafeDispose(ref d3DContext);
+        }
+
+        internal Dx11ImageSource()
         {
             StartD3D();
         }
@@ -24,13 +41,13 @@ namespace D2dControl
             EndD3D();
         }
 
-        public void InvalidateD3DImage()
+        internal void InvalidateD3DImage()
         {
             if (renderTarget != null)
                 AddDirtyRect(new System.Windows.Int32Rect(0, 0, PixelWidth, PixelHeight));
         }
 
-        public void SetRenderTarget(SharpDX.Direct3D11.Texture2D target)
+        internal void SetRenderTarget(SharpDX.Direct3D11.Texture2D target)
         {
             if (renderTarget != null)
             {
@@ -69,19 +86,11 @@ namespace D2dControl
 
         private void StartD3D()
         {
-            var presentParams = GetPresentParameters();
-            var createFlags = CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded |
-                              CreateFlags.FpuPreserve;
-
-            d3DContext = new Direct3DEx();
-            d3DDevice = new DeviceEx(d3DContext, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams);
         }
 
         private void EndD3D()
         {
             Disposer.SafeDispose(ref renderTarget);
-            Disposer.SafeDispose(ref d3DDevice);
-            Disposer.SafeDispose(ref d3DContext);
         }
 
         private static PresentParameters GetPresentParameters()
@@ -90,7 +99,7 @@ namespace D2dControl
             {
                 Windowed = true,
                 SwapEffect = SwapEffect.Discard,
-                DeviceWindowHandle = NativeMethods.GetDesktopWindow(),
+                DeviceWindowHandle = GetDesktopWindow(),
                 PresentationInterval = PresentInterval.Default
             };
 
@@ -120,5 +129,8 @@ namespace D2dControl
         {
             return (texture.Description.OptionFlags & SharpDX.Direct3D11.ResourceOptionFlags.Shared) != 0;
         }
+
+        [DllImport("user32.dll", SetLastError = false)]
+        internal static extern IntPtr GetDesktopWindow();
     }
 }

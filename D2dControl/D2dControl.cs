@@ -3,81 +3,91 @@ using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Windows;
 
 namespace D2dControl
 {
     public abstract class D2dControl : System.Windows.Controls.Image
     {
-        protected readonly ResourceCache ResCache = new ResourceCache();
+        protected readonly ResourceCache ResourceCache = new ResourceCache();
 
-        private SharpDX.Direct3D11.Device device;
+        private static SharpDX.Direct3D11.Device device;
+
         private Texture2D sharedTarget;
         private Texture2D dx11Target;
         private Dx11ImageSource d3DSurface;
         private SharpDX.Direct2D1.DeviceContext d2DRenderTarget;
 
-        private long lastFrameTime;
-        private int frameCount;
-        private int frameCountHistTotal;
-
-        private readonly Queue<int> frameCountHist = new Queue<int>();
-        private readonly Stopwatch renderTimer = new Stopwatch();
-
-        public static bool IsInDesignMode
+        private bool IsInDesignMode
         {
             get
             {
-                var prop = DesignerProperties.IsInDesignModeProperty;
-                var isDesignMode = (bool) DependencyPropertyDescriptor.FromProperty(prop, typeof(FrameworkElement))
-                    .Metadata.DefaultValue;
+                if (_IsInDesignMode.HasValue == false)
+                    _IsInDesignMode = DesignerProperties.GetIsInDesignMode(this);
 
-                return isDesignMode;
+                return _IsInDesignMode.Value;
             }
         }
+        private bool? _IsInDesignMode;
 
-        private static readonly DependencyPropertyKey FpsPropertyKey = DependencyProperty.RegisterReadOnly(
-            nameof(Fps),
-            typeof(int),
-            typeof(D2dControl),
-            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.None)
-        );
+        private bool _isRequestUpdate = true;
 
-        public static readonly DependencyProperty FpsProperty = FpsPropertyKey.DependencyProperty;
-
-        public int Fps
-        {
-            get => (int) GetValue(FpsProperty);
-            protected set => SetValue(FpsPropertyKey, value);
-        }
-
-        public static readonly DependencyPropertyKey FrameTimePropertyKey =
-            DependencyProperty.RegisterReadOnly(nameof(FrameTime), typeof(double), typeof(D2dControl),
-                new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.None));
-
-        public double FrameTime
-        {
-            get => (double) GetValue(FrameTimePropertyKey.DependencyProperty);
-            protected set => SetValue(FrameTimePropertyKey, value);
-        }
-
-        public static readonly DependencyPropertyKey IsAutoFrameUpdatePropertyKey =
-            DependencyProperty.RegisterReadOnly(nameof(IsAutoFrameUpdate), typeof(bool), typeof(D2dControl),
-                new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.None));
-
+        #region IsAutoFrameUpdate
+        
         public bool IsAutoFrameUpdate
         {
-            get => (bool) GetValue(IsAutoFrameUpdatePropertyKey.DependencyProperty);
-            protected set => SetValue(IsAutoFrameUpdatePropertyKey, value);
+            get => _IsAutoFrameUpdate;
+            set
+            {
+                if (value != _IsAutoFrameUpdate)
+                    SetValue(IsAutoFrameUpdateProperty, value);
+            }
+        }
+        
+        private bool _IsAutoFrameUpdate = true;
+        
+        public static readonly DependencyProperty IsAutoFrameUpdateProperty =
+            DependencyProperty.Register(
+                nameof(IsAutoFrameUpdate),
+                typeof(bool),
+                typeof(D2dControl),
+                new PropertyMetadata(
+                    true,
+                    (s, e) =>
+                    {
+                        var self = (D2dControl) s;
+                        self._IsAutoFrameUpdate = (bool)e.NewValue;
+                    }));
+        
+        #endregion
+
+        public static void Initialize()
+        {
+            device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport | DeviceCreationFlags.None);
+
+            Dx11ImageSource.Initialize();
+        }
+
+        public static void Destroy()
+        {
+            Dx11ImageSource.Destroy();
+
+            Disposer.SafeDispose(ref device);
+        }
+
+        public void Invalidate()
+        {
+            if (IsAutoFrameUpdate)
+                return;
+
+            _isRequestUpdate = true;
         }
 
         protected D2dControl()
         {
             Loaded += OnLoaded;
-            Unloaded += OnClosing;
+            Unloaded += OnUnloaded;
 
             Stretch = System.Windows.Media.Stretch.Fill;
         }
@@ -89,14 +99,20 @@ namespace D2dControl
             if (IsInDesignMode)
                 return;
 
+            if (device == null)
+                throw new NullReferenceException("Not yet initialized. You need to call D2dControl.Initialize().");
+
             StartD3D();
             StartRendering();
         }
 
-        private void OnClosing(object sender, RoutedEventArgs e)
+        private void OnUnloaded(object sender, RoutedEventArgs e)
         {
             if (IsInDesignMode)
                 return;
+
+            if (device == null)
+                throw new NullReferenceException("Not yet initialized. You need to call D2dControl.Initialize().");
 
             Shutdown();
         }
@@ -107,20 +123,10 @@ namespace D2dControl
             EndD3D();
         }
 
-        private bool _isRequestUpdate = true;
-
-        public void Invalidate()
-        {
-            if (IsAutoFrameUpdate)
-                return;
-
-            _isRequestUpdate = true;
-        }
-
-        public void InvalidateInternal()
+        private void InvalidateInternal()
         {
             if (device == null)
-                return;
+                throw new NullReferenceException("Not yet initialized. You need to call D2dControl.Initialize().");
 
             PrepareAndCallRender();
 
@@ -136,25 +142,20 @@ namespace D2dControl
 
         private void OnRendering(object sender, EventArgs e)
         {
-            if (renderTimer.IsRunning == false)
-                return;
-
             if (IsAutoFrameUpdate == false &&
                 _isRequestUpdate == false)
                 return;
 
             _isRequestUpdate = false;
 
-            frameTimer.Restart();
-
             InvalidateInternal();
-
-            FrameTime = timeHelper.Push(frameTimer.Elapsed.TotalMilliseconds);
         }
 
         protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
         {
             CreateAndBindTargets();
+
+            Invalidate();
 
             base.OnRenderSizeChanged(sizeInfo);
         }
@@ -169,12 +170,6 @@ namespace D2dControl
 
         private void StartD3D()
         {
-            device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport |
-#if DEBUG
-                                                                        DeviceCreationFlags.Debug |
-#endif
-                                                                        DeviceCreationFlags.None);
-
             d3DSurface = new Dx11ImageSource();
             d3DSurface.IsFrontBufferAvailableChanged += OnIsFrontBufferAvailableChanged;
 
@@ -192,7 +187,6 @@ namespace D2dControl
             Disposer.SafeDispose(ref d3DSurface);
             Disposer.SafeDispose(ref sharedTarget);
             Disposer.SafeDispose(ref dx11Target);
-            Disposer.SafeDispose(ref device);
         }
 
         private void CreateAndBindTargets()
@@ -245,75 +239,34 @@ namespace D2dControl
                 d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties()
                 {
                     Options = DeviceContextOptions.EnableMultithreadedOptimizations,
-#if DEBUG
-                    DebugLevel = DebugLevel.Information,
-#endif
                     ThreadingMode = ThreadingMode.SingleThreaded
                 });
             }
 
-            ResCache.RenderTarget = d2DRenderTarget;
+            ResourceCache.RenderTarget = d2DRenderTarget;
 
             d3DSurface.SetRenderTarget(sharedTarget);
 
             device.ImmediateContext.Rasterizer.SetViewport(0, 0, width, height);
-            TargetsCreated();
-        }
-
-        protected virtual void TargetsCreated()
-        {
         }
 
         private void StartRendering()
         {
-            if (renderTimer.IsRunning)
-                return;
-
             System.Windows.Media.CompositionTarget.Rendering += OnRendering;
-            renderTimer.Start();
         }
 
         private void StopRendering()
         {
-            if (renderTimer.IsRunning == false)
-                return;
-
             System.Windows.Media.CompositionTarget.Rendering -= OnRendering;
-            renderTimer.Stop();
         }
-
-        private readonly Stopwatch frameTimer = new Stopwatch();
-        private readonly FrameTimeHelper timeHelper = new FrameTimeHelper(60);
 
         private void PrepareAndCallRender()
         {
-            if (device == null)
-                return;
-
             d2DRenderTarget.BeginDraw();
+
             Render(d2DRenderTarget);
+
             d2DRenderTarget.EndDraw();
-
-            CalcFps();
-        }
-
-        private void CalcFps()
-        {
-            frameCount++;
-
-            if (renderTimer.ElapsedMilliseconds - lastFrameTime > 1000)
-            {
-                frameCountHist.Enqueue(frameCount);
-                frameCountHistTotal += frameCount;
-
-                if (frameCountHist.Count > 5)
-                    frameCountHistTotal -= frameCountHist.Dequeue();
-
-                Fps = frameCountHistTotal / frameCountHist.Count;
-
-                frameCount = 0;
-                lastFrameTime = renderTimer.ElapsedMilliseconds;
-            }
         }
     }
 }
