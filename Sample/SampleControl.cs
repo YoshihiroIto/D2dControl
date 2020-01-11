@@ -17,9 +17,9 @@ namespace Sample
 
         public SampleControl()
         {
-            ResCache.Add("RedBrush", t => new SolidColorBrush(t, new RawColor4(1.0f, 0.0f, 0.0f, 1.0f)));
-            ResCache.Add("GreenBrush", t => new SolidColorBrush(t, new RawColor4(0.0f, 1.0f, 0.0f, 1.0f)));
-            ResCache.Add("BlueBrush", t => new SolidColorBrush(t, new RawColor4(0.0f, 0.0f, 1.0f, 1.0f)));
+            ResourceCache.Add("RedBrush".GetHashCode(), t => new SolidColorBrush(t, new RawColor4(1.0f, 0.0f, 0.0f, 1.0f)));
+            ResourceCache.Add("GreenBrush".GetHashCode(), t => new SolidColorBrush(t, new RawColor4(0.0f, 1.0f, 0.0f, 1.0f)));
+            ResourceCache.Add("BlueBrush".GetHashCode(), t => new SolidColorBrush(t, new RawColor4(0.0f, 0.0f, 1.0f, 1.0f)));
         }
 
         public override void Render(DeviceContext target)
@@ -29,13 +29,13 @@ namespace Sample
             switch (rnd.Next(3))
             {
                 case 0:
-                    brush = ResCache["RedBrush"] as Brush;
+                    brush = ResourceCache["RedBrush".GetHashCode()] as Brush;
                     break;
                 case 1:
-                    brush = ResCache["GreenBrush"] as Brush;
+                    brush = ResourceCache["GreenBrush".GetHashCode()] as Brush;
                     break;
                 case 2:
-                    brush = ResCache["BlueBrush"] as Brush;
+                    brush = ResourceCache["BlueBrush".GetHashCode()] as Brush;
                     break;
             }
 
