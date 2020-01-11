@@ -4,6 +4,7 @@ using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using System;
 using System.ComponentModel;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
@@ -16,6 +17,14 @@ namespace D2dControl
     public abstract class D2dControl : System.Windows.Controls.Image
     {
         protected readonly ResourceCache ResourceCache = new ResourceCache();
+
+        private static SharpDX.Direct3D11.Device Device =>
+            LazyInitializer.EnsureInitialized(ref _device, () =>
+            {
+                var device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
+                Dx11ImageSource.Initialize();
+                return device;
+            });
 
         private static SharpDX.Direct3D11.Device? _device;
 
@@ -70,6 +79,9 @@ namespace D2dControl
 
         public static void Initialize()
         {
+            if (_device != null)
+                return;
+
             _device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
 
             Dx11ImageSource.Initialize();
@@ -77,6 +89,9 @@ namespace D2dControl
 
         public static void Destroy()
         {
+            if (_device == null)
+                return;
+
             Dx11ImageSource.Destroy();
 
             Disposer.SafeDispose(ref _device);
@@ -100,13 +115,11 @@ namespace D2dControl
         public abstract void Render(SharpDX.Direct2D1.DeviceContext target);
 
         private bool _isInitialized;
+
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             if (IsInDesignMode)
                 return;
-
-            if (_device == null)
-                throw new NullReferenceException("Not yet initialized. You need to call D2dControl.Initialize().");
 
             if (_isInitialized)
                 return;
@@ -139,9 +152,6 @@ namespace D2dControl
             if (IsInDesignMode)
                 return;
 
-            if (_device == null)
-                throw new NullReferenceException("Not yet initialized. You need to call D2dControl.Initialize().");
-
             if (_isInitialized == false)
                 return;
 
@@ -161,7 +171,7 @@ namespace D2dControl
                     _parentPopup.Closed -= OnUnloaded;
             }
         }
-    
+
         private void SystemEventsOnSessionSwitch(object sender, SessionSwitchEventArgs e)
         {
             // アンロック以降、描画されない。
@@ -193,9 +203,6 @@ namespace D2dControl
 
         private void InvalidateInternal()
         {
-            if (_device == null)
-                throw new NullReferenceException("Not yet initialized. You need to call D2dControl.Initialize().");
-
             if (_d3DSurface == null)
                 return;
 
@@ -205,12 +212,12 @@ namespace D2dControl
 
                 _d3DSurface.Lock();
 
-                _device.ImmediateContext.ResolveSubresource(_dx11Target, 0, _sharedTarget, 0, Format.B8G8R8A8_UNorm);
+                Device.ImmediateContext.ResolveSubresource(_dx11Target, 0, _sharedTarget, 0, Format.B8G8R8A8_UNorm);
                 _d3DSurface.InvalidateD3DImage();
 
                 _d3DSurface.Unlock();
 
-                _device.ImmediateContext.Flush();
+                Device.ImmediateContext.Flush();
             }
             catch (SharpDXException ex)
             {
@@ -282,9 +289,6 @@ namespace D2dControl
             if (_d3DSurface == null)
                 return;
 
-            if (_device == null)
-                throw new NullReferenceException("Not yet initialized. You need to call D2dControl.Initialize().");
-
             _d3DSurface.SetRenderTarget(null);
 
             Disposer.SafeDispose(ref _d2DRenderTarget);
@@ -322,8 +326,8 @@ namespace D2dControl
                 ArraySize = 1
             };
 
-            _sharedTarget = new Texture2D(_device, frontDesc);
-            _dx11Target = new Texture2D(_device, backDesc);
+            _sharedTarget = new Texture2D(Device, frontDesc);
+            _dx11Target = new Texture2D(Device, backDesc);
 
             using (var surface = _dx11Target.QueryInterface<Surface>())
             {
@@ -338,7 +342,7 @@ namespace D2dControl
 
             _d3DSurface.SetRenderTarget(_sharedTarget);
 
-            _device.ImmediateContext.Rasterizer.SetViewport(0, 0, width, height);
+            Device.ImmediateContext.Rasterizer.SetViewport(0, 0, width, height);
         }
 
         private void StartRendering()
