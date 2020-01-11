@@ -76,12 +76,11 @@ namespace D2dControl
             _renderTarget = new Texture(_d3DDevice, target.Description.Width, target.Description.Height, 1,
                 Usage.RenderTarget, format, Pool.Default, ref handle);
 
-            using (var surface = _renderTarget.GetSurfaceLevel(0))
-            {
-                Lock();
-                SetBackBuffer(D3DResourceType.IDirect3DSurface9, surface.NativePointer);
-                Unlock();
-            }
+            using var surface = _renderTarget.GetSurfaceLevel(0);
+
+            Lock();
+            SetBackBuffer(D3DResourceType.IDirect3DSurface9, surface.NativePointer);
+            Unlock();
         }
 
         private void StartD3D()
@@ -108,10 +107,9 @@ namespace D2dControl
 
         private IntPtr GetSharedHandle(SharpDX.Direct3D11.Texture2D texture)
         {
-            using (var resource = texture.QueryInterface<SharpDX.DXGI.Resource>())
-            {
-                return resource.SharedHandle;
-            }
+            using var resource = texture.QueryInterface<SharpDX.DXGI.Resource>();
+
+            return resource.SharedHandle;
         }
 
         private static Format TranslateFormat(SharpDX.Direct3D11.Texture2D texture)
