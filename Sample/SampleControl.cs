@@ -8,8 +8,8 @@ namespace Sample
     {
         private float x;
         private float y;
-        private float w = 10;
-        private float h = 10;
+        private readonly float w = 10;
+        private readonly float h = 10;
         private float dx = 1;
         private float dy = 1;
 
@@ -25,7 +25,7 @@ namespace Sample
         public override void Render(DeviceContext target)
         {
             target.Clear(new RawColor4(1.0f, 1.0f, 1.0f, 1.0f));
-            Brush brush = null;
+            Brush? brush = null;
             switch (rnd.Next(3))
             {
                 case 0:
@@ -41,8 +41,8 @@ namespace Sample
 
             target.DrawRectangle(new RawRectangleF(x, y, x + w, y + h), brush);
 
-            x = x + dx;
-            y = y + dy;
+            x += dx;
+            y += dy;
             if (x >= ActualWidth - w || x <= 0)
             {
                 dx = -dx;
