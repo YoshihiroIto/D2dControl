@@ -30,7 +30,7 @@ namespace D2dControl
 
         public Dictionary<int, object?>.ValueCollection Values => _resources.Values;
 
-        public object Add(int key, Func<RenderTarget, object> gen)
+        public object? Add(int key, Func<RenderTarget, object> gen)
         {
             if (_resources.TryGetValue(key, out var resOld))
             {
