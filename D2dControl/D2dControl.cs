@@ -4,6 +4,7 @@ using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using System;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls.Primitives;
@@ -77,10 +78,14 @@ namespace D2dControl
 
         #endregion
 
+        internal static bool IsSoftwareRenderingMode { get; private set; }
+
         public static void Initialize()
         {
             if (_device != null)
                 return;
+
+            MakeIsSoftwareRenderingMode();
 
             _device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
 
@@ -252,6 +257,10 @@ namespace D2dControl
 
         private void OnIsFrontBufferAvailableChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
+            // https://github.com/Sascha-L/WPF-MediaKit/issues/3
+            if (IsSoftwareRenderingMode)
+                return;
+
             if (_d3DSurface == null)
                 return;
 
@@ -381,5 +390,53 @@ namespace D2dControl
 
             return null;
         }
+
+        private static void MakeIsSoftwareRenderingMode()
+        {
+            // https://stackoverflow.com/questions/56849171/direct2d-with-wpf-over-rdp
+            // https://github.com/Sascha-L/WPF-MediaKit/issues/3
+            // https://docs.microsoft.com/en-us/archive/blogs/wpf3d/d3dimage-and-software-rendering
+            // https://docs.microsoft.com/en-us/dotnet/framework/wpf/graphics-multimedia/graphics-rendering-registry-settings
+
+            // Rendering tier 
+            var renderingTier = RenderCapability.Tier >> 16;
+            if (renderingTier == 0)
+            {
+                IsSoftwareRenderingMode = true;
+                return;
+            }
+
+            // Remote desktop
+            if (GetSystemMetrics(SM_REMOTESESSION) != 0)
+            {
+                IsSoftwareRenderingMode = true;
+                return;
+            }
+
+            // DisableHWAcceleration
+            try
+            {
+                var subKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Avalon.Graphics");
+
+                var d = (int) subKey.GetValue("DisableHWAcceleration");
+                if (d != 0)
+                {
+                    IsSoftwareRenderingMode = true;
+                    // ReSharper disable once RedundantJumpStatement
+                    return;
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
+        // ReSharper disable once InconsistentNaming
+        // ReSharper disable once IdentifierTypo
+        private const int SM_REMOTESESSION = 0x1000;
+
+        [DllImport("user32")]
+        private static extern int GetSystemMetrics(int index);
     }
 }

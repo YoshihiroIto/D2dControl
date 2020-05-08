@@ -79,7 +79,7 @@ namespace D2dControl
             using var surface = _renderTarget.GetSurfaceLevel(0);
 
             Lock();
-            SetBackBuffer(D3DResourceType.IDirect3DSurface9, surface.NativePointer);
+            SetBackBuffer(D3DResourceType.IDirect3DSurface9, surface.NativePointer, D2dControl.IsSoftwareRenderingMode);
             Unlock();
         }
 
