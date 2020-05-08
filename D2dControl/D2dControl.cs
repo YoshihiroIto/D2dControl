@@ -22,6 +22,8 @@ namespace D2dControl
         private static SharpDX.Direct3D11.Device Device =>
             LazyInitializer.EnsureInitialized(ref _device, () =>
             {
+                MakeIsSoftwareRenderingMode();
+                
                 var device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
                 Dx11ImageSource.Initialize();
                 return device;
@@ -82,14 +84,6 @@ namespace D2dControl
 
         public static void Initialize()
         {
-            if (_device != null)
-                return;
-
-            MakeIsSoftwareRenderingMode();
-
-            _device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
-
-            Dx11ImageSource.Initialize();
         }
 
         public static void Destroy()
