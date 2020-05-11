@@ -12,6 +12,11 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using SharpDX;
 using Microsoft.Win32;
+using SharpDX.Direct3D9;
+using Format = SharpDX.DXGI.Format;
+using PresentParameters = SharpDX.Direct3D9.PresentParameters;
+using Surface = SharpDX.DXGI.Surface;
+using SwapEffect = SharpDX.Direct3D9.SwapEffect;
 
 namespace D2dControl
 {
@@ -28,7 +33,22 @@ namespace D2dControl
                 return device;
             });
 
+        private static Direct3DEx Direct3DEx =>
+            LazyInitializer.EnsureInitialized(ref _d3DContext, () =>
+                new Direct3DEx());
+
+        private static DeviceEx DeviceEx =>
+            LazyInitializer.EnsureInitialized(ref _d3DDevice, () =>
+            {
+                var presentParams = GetPresentParameters();
+                const CreateFlags createFlags = CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded | CreateFlags.FpuPreserve;
+
+                return new DeviceEx(Direct3DEx, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams);
+            });
+
         private static SharpDX.Direct3D11.Device? _device;
+        private static Direct3DEx? _d3DContext;
+        private static DeviceEx? _d3DDevice;
 
         private Texture2D? _sharedTarget;
         private Texture2D? _dx11Target;
@@ -83,13 +103,13 @@ namespace D2dControl
 
         public static void Initialize()
         {
+            // do nothing
         }
 
         public static void Destroy()
         {
-            if (_device == null)
-                return;
-
+            Disposer.SafeDispose(ref _d3DDevice);
+            Disposer.SafeDispose(ref _d3DContext);
             Disposer.SafeDispose(ref _device);
         }
 
@@ -108,7 +128,7 @@ namespace D2dControl
             Stretch = Stretch.Fill;
         }
 
-        public abstract void Render(SharpDX.Direct2D1.DeviceContext target);
+        protected abstract void Render(SharpDX.Direct2D1.DeviceContext target);
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
@@ -117,10 +137,12 @@ namespace D2dControl
 
         private void OnUnloaded(object? sender, EventArgs e)
         {
-            DestoryInternal();
+            DestroyInternal();
         }
 
         private bool _isInitialized;
+        private Window? _parentWindow;
+        private Popup? _parentPopup;
 
         private void InitializeInternal()
         {
@@ -150,10 +172,7 @@ namespace D2dControl
             }
         }
 
-        private Window? _parentWindow;
-        private Popup? _parentPopup;
-
-        private void DestoryInternal()
+        private void DestroyInternal()
         {
             if (IsInDesignMode)
                 return;
@@ -162,8 +181,6 @@ namespace D2dControl
                 return;
 
             _isInitialized = false;
-
-            ResourceCache.Clear();
 
             Shutdown();
 
@@ -182,8 +199,8 @@ namespace D2dControl
 
         private void SystemEventsOnSessionSwitch(object sender, SessionSwitchEventArgs e)
         {
-            // アンロック以降、描画されない。
-            // デバイスロスト時の振る舞いに似ているが、デバイスロストとしては検知されないため明示的に再描画している
+            // Not drawn since the unlock.
+            // similar to device lost behavior, but explicitly redrawn because it is not detected as device lost
             if (e.Reason == SessionSwitchReason.SessionUnlock)
             {
                 var timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle)
@@ -200,7 +217,7 @@ namespace D2dControl
                 };
 
                 timer.Start();
-                
+
                 RebuildThis();
             }
         }
@@ -288,7 +305,7 @@ namespace D2dControl
 
         private void StartD3D()
         {
-            _d3DSurface = new Dx11ImageSource();
+            _d3DSurface = new Dx11ImageSource(DeviceEx);
             _d3DSurface.IsFrontBufferAvailableChanged += OnIsFrontBufferAvailableChanged;
 
             CreateAndBindTargets();
@@ -360,7 +377,7 @@ namespace D2dControl
 
                 using (var surface = _dx11Target.QueryInterface<Surface>())
                 {
-                    _d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties()
+                    _d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties
                     {
                         Options = DeviceContextOptions.EnableMultithreadedOptimizations,
                         ThreadingMode = ThreadingMode.SingleThreaded
@@ -394,18 +411,22 @@ namespace D2dControl
             if (_d2DRenderTarget == null)
                 return;
 
-            _d2DRenderTarget.BeginDraw();
-
-            Render(_d2DRenderTarget);
-
-            _d2DRenderTarget.EndDraw();
+            try
+            {
+                _d2DRenderTarget.BeginDraw();
+                Render(_d2DRenderTarget);
+            }
+            finally
+            {
+                _d2DRenderTarget.EndDraw();
+            }
         }
 
         private void RebuildThis()
         {
             MakeIsSoftwareRenderingMode();
-            
-            DestoryInternal();
+
+            DestroyInternal();
             Destroy();
             Initialize();
             InitializeInternal();
@@ -466,8 +487,26 @@ namespace D2dControl
             {
                 // ignored
             }
+
+            IsSoftwareRenderingMode = false;
         }
-        
+
+        private static PresentParameters GetPresentParameters()
+        {
+            var presentParams = new PresentParameters
+            {
+                Windowed = true,
+                SwapEffect = SwapEffect.Discard,
+                DeviceWindowHandle = GetDesktopWindow(),
+                PresentationInterval = PresentInterval.Default
+            };
+
+            return presentParams;
+        }
+
+        [DllImport("user32.dll", SetLastError = false)]
+        private static extern IntPtr GetDesktopWindow();
+
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once IdentifierTypo
         private const int SM_REMOTESESSION = 0x1000;

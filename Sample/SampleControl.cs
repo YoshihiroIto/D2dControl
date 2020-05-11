@@ -22,22 +22,16 @@ namespace Sample
             ResourceCache.Add("BlueBrush".GetHashCode(), t => new SolidColorBrush(t, new RawColor4(0.0f, 0.0f, 1.0f, 1.0f)));
         }
 
-        public override void Render(DeviceContext target)
+        protected override void Render(DeviceContext target)
         {
             target.Clear(new RawColor4(1.0f, 1.0f, 1.0f, 1.0f));
-            Brush? brush = null;
-            switch (rnd.Next(3))
+            var brush = rnd.Next(3) switch
             {
-                case 0:
-                    brush = ResourceCache["RedBrush".GetHashCode()] as Brush;
-                    break;
-                case 1:
-                    brush = ResourceCache["GreenBrush".GetHashCode()] as Brush;
-                    break;
-                case 2:
-                    brush = ResourceCache["BlueBrush".GetHashCode()] as Brush;
-                    break;
-            }
+                0 => ResourceCache["RedBrush".GetHashCode()] as Brush,
+                1 => ResourceCache["GreenBrush".GetHashCode()] as Brush,
+                2 => ResourceCache["BlueBrush".GetHashCode()] as Brush,
+                _ => null
+            };
 
             target.DrawRectangle(new RawRectangleF(x, y, x + w, y + h), brush);
 

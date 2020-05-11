@@ -1,24 +1,17 @@
 ﻿using SharpDX.Direct3D9;
 using System;
 using System.Windows.Interop;
-using System.Runtime.InteropServices;
 
 namespace D2dControl
 {
     internal class Dx11ImageSource : D3DImage, IDisposable
     {
-        private Direct3DEx? _d3DContext;
-        private DeviceEx? _d3DDevice;
-
+        private readonly DeviceEx _d3DDevice;
         private Texture? _renderTarget;
 
-        internal Dx11ImageSource()
+        internal Dx11ImageSource(DeviceEx d3DDevice)
         {
-            var presentParams = GetPresentParameters();
-            var createFlags = CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded | CreateFlags.FpuPreserve;
-            _d3DContext = new Direct3DEx();
-            _d3DDevice = new DeviceEx(_d3DContext, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams);
-            
+            _d3DDevice = d3DDevice;
             StartD3D();
         }
 
@@ -29,9 +22,6 @@ namespace D2dControl
             Disposer.SafeDispose(ref _renderTarget);
 
             EndD3D();
-            
-            Disposer.SafeDispose(ref _d3DDevice);
-            Disposer.SafeDispose(ref _d3DContext);
         }
 
         internal void InvalidateD3DImage()
@@ -90,6 +80,7 @@ namespace D2dControl
 
         private void StartD3D()
         {
+            // do nothing
         }
 
         private void EndD3D()
@@ -97,20 +88,7 @@ namespace D2dControl
             Disposer.SafeDispose(ref _renderTarget);
         }
 
-        private static PresentParameters GetPresentParameters()
-        {
-            var presentParams = new PresentParameters
-            {
-                Windowed = true,
-                SwapEffect = SwapEffect.Discard,
-                DeviceWindowHandle = GetDesktopWindow(),
-                PresentationInterval = PresentInterval.Default
-            };
-
-            return presentParams;
-        }
-
-        private IntPtr GetSharedHandle(SharpDX.Direct3D11.Texture2D texture)
+        private static IntPtr GetSharedHandle(SharpDX.Direct3D11.Texture2D texture)
         {
             using var resource = texture.QueryInterface<SharpDX.DXGI.Resource>();
 
@@ -119,21 +97,18 @@ namespace D2dControl
 
         private static Format TranslateFormat(SharpDX.Direct3D11.Texture2D texture)
         {
-            switch (texture.Description.Format)
+            return texture.Description.Format switch
             {
-                case SharpDX.DXGI.Format.R10G10B10A2_UNorm: return Format.A2B10G10R10;
-                case SharpDX.DXGI.Format.R16G16B16A16_Float: return Format.A16B16G16R16F;
-                case SharpDX.DXGI.Format.B8G8R8A8_UNorm: return Format.A8R8G8B8;
-                default: return Format.Unknown;
-            }
+                SharpDX.DXGI.Format.R10G10B10A2_UNorm => Format.A2B10G10R10,
+                SharpDX.DXGI.Format.R16G16B16A16_Float => Format.A16B16G16R16F,
+                SharpDX.DXGI.Format.B8G8R8A8_UNorm => Format.A8R8G8B8,
+                _ => Format.Unknown
+            };
         }
 
         private static bool IsShareable(SharpDX.Direct3D11.Texture2D texture)
         {
             return (texture.Description.OptionFlags & SharpDX.Direct3D11.ResourceOptionFlags.Shared) != 0;
         }
-
-        [DllImport("user32.dll", SetLastError = false)]
-        private static extern IntPtr GetDesktopWindow();
     }
 }

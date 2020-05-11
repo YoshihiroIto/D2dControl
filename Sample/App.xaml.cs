@@ -19,7 +19,6 @@ namespace Sample
             base.OnExit(e);
 
             D2dControl.D2dControl.Destroy();
-
         }
     }
 }
