@@ -163,8 +163,6 @@ namespace D2dControl
 
             _isInitialized = false;
 
-            ResourceCache.Clear();
-
             Shutdown();
 
             // event
