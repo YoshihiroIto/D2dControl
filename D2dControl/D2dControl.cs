@@ -23,9 +23,8 @@ namespace D2dControl
             LazyInitializer.EnsureInitialized(ref _device, () =>
             {
                 MakeIsSoftwareRenderingMode();
-                
+
                 var device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
-                Dx11ImageSource.Initialize();
                 return device;
             });
 
@@ -91,8 +90,6 @@ namespace D2dControl
             if (_device == null)
                 return;
 
-            Dx11ImageSource.Destroy();
-
             Disposer.SafeDispose(ref _device);
         }
 
@@ -113,9 +110,19 @@ namespace D2dControl
 
         public abstract void Render(SharpDX.Direct2D1.DeviceContext target);
 
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            InitializeInternal();
+        }
+
+        private void OnUnloaded(object? sender, EventArgs e)
+        {
+            DestoryInternal();
+        }
+
         private bool _isInitialized;
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        private void InitializeInternal()
         {
             if (IsInDesignMode)
                 return;
@@ -146,7 +153,7 @@ namespace D2dControl
         private Window? _parentWindow;
         private Popup? _parentPopup;
 
-        private void OnUnloaded(object? sender, EventArgs e)
+        private void DestoryInternal()
         {
             if (IsInDesignMode)
                 return;
@@ -155,6 +162,8 @@ namespace D2dControl
                 return;
 
             _isInitialized = false;
+
+            ResourceCache.Clear();
 
             Shutdown();
 
@@ -191,6 +200,8 @@ namespace D2dControl
                 };
 
                 timer.Start();
+                
+                RebuildThis();
             }
         }
 
@@ -209,12 +220,17 @@ namespace D2dControl
             {
                 PrepareAndCallRender();
 
-                _d3DSurface.Lock();
+                try
+                {
+                    _d3DSurface.Lock();
 
-                Device.ImmediateContext.ResolveSubresource(_dx11Target, 0, _sharedTarget, 0, Format.B8G8R8A8_UNorm);
-                _d3DSurface.InvalidateD3DImage();
-
-                _d3DSurface.Unlock();
+                    Device.ImmediateContext.ResolveSubresource(_dx11Target, 0, _sharedTarget, 0, Format.B8G8R8A8_UNorm);
+                    _d3DSurface.InvalidateD3DImage();
+                }
+                finally
+                {
+                    _d3DSurface.Unlock();
+                }
 
                 Device.ImmediateContext.Flush();
             }
@@ -234,6 +250,12 @@ namespace D2dControl
             if (IsAutoFrameUpdate == false &&
                 _isRequestUpdate == false)
                 return;
+
+            if (_isError)
+            {
+                RebuildThis();
+                _isError = false;
+            }
 
             _isRequestUpdate = false;
 
@@ -287,65 +309,74 @@ namespace D2dControl
             Disposer.SafeDispose(ref _dx11Target);
         }
 
+        private bool _isError;
+
         private void CreateAndBindTargets()
         {
             if (_d3DSurface == null)
                 return;
 
-            _d3DSurface.SetRenderTarget(null);
-
-            Disposer.SafeDispose(ref _d2DRenderTarget);
-            Disposer.SafeDispose(ref _sharedTarget);
-            Disposer.SafeDispose(ref _dx11Target);
-
-            var width = Math.Max((int) ActualWidth, 100);
-            var height = Math.Max((int) ActualHeight, 100);
-
-            var frontDesc = new Texture2DDescription
+            try
             {
-                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
-                Format = Format.B8G8R8A8_UNorm,
-                Width = width,
-                Height = height,
-                MipLevels = 1,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = ResourceUsage.Default,
-                OptionFlags = ResourceOptionFlags.Shared,
-                CpuAccessFlags = CpuAccessFlags.None,
-                ArraySize = 1
-            };
+                _d3DSurface.SetRenderTarget(null);
 
-            var backDesc = new Texture2DDescription
-            {
-                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
-                Format = Format.B8G8R8A8_UNorm,
-                Width = width,
-                Height = height,
-                MipLevels = 1,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = ResourceUsage.Default,
-                OptionFlags = ResourceOptionFlags.None,
-                CpuAccessFlags = CpuAccessFlags.None,
-                ArraySize = 1
-            };
+                Disposer.SafeDispose(ref _d2DRenderTarget);
+                Disposer.SafeDispose(ref _sharedTarget);
+                Disposer.SafeDispose(ref _dx11Target);
 
-            _sharedTarget = new Texture2D(Device, frontDesc);
-            _dx11Target = new Texture2D(Device, backDesc);
+                var width = Math.Max((int) ActualWidth, 100);
+                var height = Math.Max((int) ActualHeight, 100);
 
-            using (var surface = _dx11Target.QueryInterface<Surface>())
-            {
-                _d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties()
+                var frontDesc = new Texture2DDescription
                 {
-                    Options = DeviceContextOptions.EnableMultithreadedOptimizations,
-                    ThreadingMode = ThreadingMode.SingleThreaded
-                });
+                    BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
+                    Format = Format.B8G8R8A8_UNorm,
+                    Width = width,
+                    Height = height,
+                    MipLevels = 1,
+                    SampleDescription = new SampleDescription(1, 0),
+                    Usage = ResourceUsage.Default,
+                    OptionFlags = ResourceOptionFlags.Shared,
+                    CpuAccessFlags = CpuAccessFlags.None,
+                    ArraySize = 1
+                };
+
+                var backDesc = new Texture2DDescription
+                {
+                    BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
+                    Format = Format.B8G8R8A8_UNorm,
+                    Width = width,
+                    Height = height,
+                    MipLevels = 1,
+                    SampleDescription = new SampleDescription(1, 0),
+                    Usage = ResourceUsage.Default,
+                    OptionFlags = ResourceOptionFlags.None,
+                    CpuAccessFlags = CpuAccessFlags.None,
+                    ArraySize = 1
+                };
+
+                _sharedTarget = new Texture2D(Device, frontDesc);
+                _dx11Target = new Texture2D(Device, backDesc);
+
+                using (var surface = _dx11Target.QueryInterface<Surface>())
+                {
+                    _d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties()
+                    {
+                        Options = DeviceContextOptions.EnableMultithreadedOptimizations,
+                        ThreadingMode = ThreadingMode.SingleThreaded
+                    });
+                }
+
+                ResourceCache.RenderTarget = _d2DRenderTarget;
+
+                _d3DSurface.SetRenderTarget(_sharedTarget);
+
+                Device.ImmediateContext.Rasterizer.SetViewport(0, 0, width, height);
             }
-
-            ResourceCache.RenderTarget = _d2DRenderTarget;
-
-            _d3DSurface.SetRenderTarget(_sharedTarget);
-
-            Device.ImmediateContext.Rasterizer.SetViewport(0, 0, width, height);
+            catch (Exception e)
+            {
+                _isError = true;
+            }
         }
 
         private void StartRendering()
@@ -368,6 +399,17 @@ namespace D2dControl
             Render(_d2DRenderTarget);
 
             _d2DRenderTarget.EndDraw();
+        }
+
+        private void RebuildThis()
+        {
+            MakeIsSoftwareRenderingMode();
+            
+            DestoryInternal();
+            Destroy();
+            Initialize();
+            InitializeInternal();
+            CreateAndBindTargets();
         }
 
         private T? GetParent<T>() where T : class
@@ -425,7 +467,7 @@ namespace D2dControl
                 // ignored
             }
         }
-
+        
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once IdentifierTypo
         private const int SM_REMOTESESSION = 0x1000;

@@ -7,28 +7,18 @@ namespace D2dControl
 {
     internal class Dx11ImageSource : D3DImage, IDisposable
     {
-        private static Direct3DEx? _d3DContext;
-        private static DeviceEx? _d3DDevice;
+        private Direct3DEx? _d3DContext;
+        private DeviceEx? _d3DDevice;
 
         private Texture? _renderTarget;
 
-        internal static void Initialize()
+        internal Dx11ImageSource()
         {
             var presentParams = GetPresentParameters();
             var createFlags = CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded | CreateFlags.FpuPreserve;
-
             _d3DContext = new Direct3DEx();
             _d3DDevice = new DeviceEx(_d3DContext, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams);
-        }
-
-        internal static void Destroy()
-        {
-            Disposer.SafeDispose(ref _d3DDevice);
-            Disposer.SafeDispose(ref _d3DContext);
-        }
-
-        internal Dx11ImageSource()
-        {
+            
             StartD3D();
         }
 
@@ -39,6 +29,9 @@ namespace D2dControl
             Disposer.SafeDispose(ref _renderTarget);
 
             EndD3D();
+            
+            Disposer.SafeDispose(ref _d3DDevice);
+            Disposer.SafeDispose(ref _d3DContext);
         }
 
         internal void InvalidateD3DImage()
@@ -51,9 +44,15 @@ namespace D2dControl
         {
             if (_renderTarget != null)
             {
-                Lock();
-                SetBackBuffer(D3DResourceType.IDirect3DSurface9, IntPtr.Zero);
-                Unlock();
+                try
+                {
+                    Lock();
+                    SetBackBuffer(D3DResourceType.IDirect3DSurface9, IntPtr.Zero);
+                }
+                finally
+                {
+                    Unlock();
+                }
 
                 Disposer.SafeDispose(ref _renderTarget);
             }
@@ -78,9 +77,15 @@ namespace D2dControl
 
             using var surface = _renderTarget.GetSurfaceLevel(0);
 
-            Lock();
-            SetBackBuffer(D3DResourceType.IDirect3DSurface9, surface.NativePointer, D2dControl.IsSoftwareRenderingMode);
-            Unlock();
+            try
+            {
+                Lock();
+                SetBackBuffer(D3DResourceType.IDirect3DSurface9, surface.NativePointer, D2dControl.IsSoftwareRenderingMode);
+            }
+            finally
+            {
+                Unlock();
+            }
         }
 
         private void StartD3D()
