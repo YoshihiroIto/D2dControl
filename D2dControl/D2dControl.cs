@@ -373,7 +373,7 @@ namespace D2dControl
 
                 Device.ImmediateContext.Rasterizer.SetViewport(0, 0, width, height);
             }
-            catch (Exception e)
+            catch
             {
                 _isError = true;
             }
