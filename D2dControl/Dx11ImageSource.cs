@@ -1,17 +1,24 @@
 ﻿using SharpDX.Direct3D9;
 using System;
 using System.Windows.Interop;
+using System.Runtime.InteropServices;
 
 namespace D2dControl
 {
     internal class Dx11ImageSource : D3DImage, IDisposable
     {
-        private readonly DeviceEx _d3DDevice;
+        private Direct3DEx? _d3DContext;
+        private DeviceEx? _d3DDevice;
         private Texture? _renderTarget;
 
-        internal Dx11ImageSource(DeviceEx d3DDevice)
+        internal Dx11ImageSource()
         {
-            _d3DDevice = d3DDevice;
+            var presentParams = GetPresentParameters();
+            const CreateFlags createFlags = CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded | CreateFlags.FpuPreserve;
+            
+            _d3DContext = new Direct3DEx();
+            _d3DDevice = new DeviceEx(_d3DContext, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams);
+            
             StartD3D();
         }
 
@@ -22,6 +29,9 @@ namespace D2dControl
             Disposer.SafeDispose(ref _renderTarget);
 
             EndD3D();
+            
+            Disposer.SafeDispose(ref _d3DDevice);
+            Disposer.SafeDispose(ref _d3DContext);
         }
 
         internal void InvalidateD3DImage()
@@ -88,6 +98,19 @@ namespace D2dControl
             Disposer.SafeDispose(ref _renderTarget);
         }
 
+        private static PresentParameters GetPresentParameters()
+        {
+            var presentParams = new PresentParameters
+            {
+                Windowed = true,
+                SwapEffect = SwapEffect.Discard,
+                DeviceWindowHandle = GetDesktopWindow(),
+                PresentationInterval = PresentInterval.Default
+            };
+
+            return presentParams;
+        }
+
         private static IntPtr GetSharedHandle(SharpDX.Direct3D11.Texture2D texture)
         {
             using var resource = texture.QueryInterface<SharpDX.DXGI.Resource>();
@@ -110,5 +133,8 @@ namespace D2dControl
         {
             return (texture.Description.OptionFlags & SharpDX.Direct3D11.ResourceOptionFlags.Shared) != 0;
         }
+
+        [DllImport("user32.dll", SetLastError = false)]
+        private static extern IntPtr GetDesktopWindow();
     }
 }
