@@ -83,13 +83,11 @@ namespace D2dControl
 
         public static void Initialize()
         {
+            // do nothing
         }
 
         public static void Destroy()
         {
-            if (_device == null)
-                return;
-
             Disposer.SafeDispose(ref _device);
         }
 
@@ -108,7 +106,7 @@ namespace D2dControl
             Stretch = Stretch.Fill;
         }
 
-        public abstract void Render(SharpDX.Direct2D1.DeviceContext target);
+        protected abstract void Render(SharpDX.Direct2D1.DeviceContext target);
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
@@ -117,10 +115,12 @@ namespace D2dControl
 
         private void OnUnloaded(object? sender, EventArgs e)
         {
-            DestoryInternal();
+            DestroyInternal();
         }
 
         private bool _isInitialized;
+        private Window? _parentWindow;
+        private Popup? _parentPopup;
 
         private void InitializeInternal()
         {
@@ -150,10 +150,7 @@ namespace D2dControl
             }
         }
 
-        private Window? _parentWindow;
-        private Popup? _parentPopup;
-
-        private void DestoryInternal()
+        private void DestroyInternal()
         {
             if (IsInDesignMode)
                 return;
@@ -180,8 +177,8 @@ namespace D2dControl
 
         private void SystemEventsOnSessionSwitch(object sender, SessionSwitchEventArgs e)
         {
-            // アンロック以降、描画されない。
-            // デバイスロスト時の振る舞いに似ているが、デバイスロストとしては検知されないため明示的に再描画している
+            // Not drawn since the unlock.
+            // similar to device lost behavior, but explicitly redrawn because it is not detected as device lost
             if (e.Reason == SessionSwitchReason.SessionUnlock)
             {
                 var timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle)
@@ -198,7 +195,7 @@ namespace D2dControl
                 };
 
                 timer.Start();
-                
+
                 RebuildThis();
             }
         }
@@ -371,7 +368,7 @@ namespace D2dControl
 
                 Device.ImmediateContext.Rasterizer.SetViewport(0, 0, width, height);
             }
-            catch (Exception e)
+            catch
             {
                 _isError = true;
             }
@@ -392,18 +389,22 @@ namespace D2dControl
             if (_d2DRenderTarget == null)
                 return;
 
-            _d2DRenderTarget.BeginDraw();
-
-            Render(_d2DRenderTarget);
-
-            _d2DRenderTarget.EndDraw();
+            try
+            {
+                _d2DRenderTarget.BeginDraw();
+                Render(_d2DRenderTarget);
+            }
+            finally
+            {
+                _d2DRenderTarget.EndDraw();
+            }
         }
 
         private void RebuildThis()
         {
             MakeIsSoftwareRenderingMode();
-            
-            DestoryInternal();
+
+            DestroyInternal();
             Destroy();
             Initialize();
             InitializeInternal();
@@ -464,8 +465,10 @@ namespace D2dControl
             {
                 // ignored
             }
+
+            IsSoftwareRenderingMode = false;
         }
-        
+
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once IdentifierTypo
         private const int SM_REMOTESESSION = 0x1000;
