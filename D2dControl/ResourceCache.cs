@@ -39,7 +39,7 @@ namespace D2dControl
                 _resources.Remove(key);
             }
 
-            if (_renderTarget == null)
+            if (_renderTarget is null)
             {
                 _generators.Add(key, gen);
                 _resources.Add(key, null);
@@ -98,7 +98,7 @@ namespace D2dControl
 
         private void UpdateResources()
         {
-            if (_renderTarget == null)
+            if (_renderTarget is null)
                 return;
 
             foreach (var g in _generators)

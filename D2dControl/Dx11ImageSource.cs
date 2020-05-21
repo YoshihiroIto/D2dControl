@@ -57,7 +57,7 @@ namespace D2dControl
                 Disposer.SafeDispose(ref _renderTarget);
             }
 
-            if (target == null)
+            if (target is null)
                 return;
 
             var format = TranslateFormat(target);

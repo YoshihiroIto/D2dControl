@@ -208,7 +208,7 @@ namespace D2dControl
 
         private void InvalidateInternal()
         {
-            if (_d3DSurface == null)
+            if (_d3DSurface is null)
                 return;
 
             try
@@ -272,7 +272,7 @@ namespace D2dControl
             if (IsSoftwareRenderingMode)
                 return;
 
-            if (_d3DSurface == null)
+            if (_d3DSurface is null)
                 return;
 
             if (_d3DSurface.IsFrontBufferAvailable)
@@ -308,7 +308,7 @@ namespace D2dControl
 
         private void CreateAndBindTargets()
         {
-            if (_d3DSurface == null)
+            if (_d3DSurface is null)
                 return;
 
             try
@@ -386,7 +386,7 @@ namespace D2dControl
 
         private void PrepareAndCallRender()
         {
-            if (_d2DRenderTarget == null)
+            if (_d2DRenderTarget is null)
                 return;
 
             try
