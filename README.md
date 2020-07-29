@@ -4,9 +4,6 @@
 
 **D2dControl** is a WPF Control for Direct2D with SharpDX.
 
-## Install
-Download from [nuget](https://www.nuget.org/packages/D2dControl/)
-
 ## Dependencies
 - SharpDX ( >= 3.0.0 )
 
