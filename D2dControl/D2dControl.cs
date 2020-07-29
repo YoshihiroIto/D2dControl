@@ -12,11 +12,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using SharpDX;
 using Microsoft.Win32;
-using SharpDX.Direct3D9;
-using Format = SharpDX.DXGI.Format;
-using PresentParameters = SharpDX.Direct3D9.PresentParameters;
-using Surface = SharpDX.DXGI.Surface;
-using SwapEffect = SharpDX.Direct3D9.SwapEffect;
 
 namespace D2dControl
 {
@@ -33,22 +28,7 @@ namespace D2dControl
                 return device;
             });
 
-        private static Direct3DEx Direct3DEx =>
-            LazyInitializer.EnsureInitialized(ref _d3DContext, () =>
-                new Direct3DEx());
-
-        private static DeviceEx DeviceEx =>
-            LazyInitializer.EnsureInitialized(ref _d3DDevice, () =>
-            {
-                var presentParams = GetPresentParameters();
-                const CreateFlags createFlags = CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded | CreateFlags.FpuPreserve;
-
-                return new DeviceEx(Direct3DEx, 0, DeviceType.Hardware, IntPtr.Zero, createFlags, presentParams);
-            });
-
         private static SharpDX.Direct3D11.Device? _device;
-        private static Direct3DEx? _d3DContext;
-        private static DeviceEx? _d3DDevice;
 
         private Texture2D? _sharedTarget;
         private Texture2D? _dx11Target;
@@ -108,8 +88,6 @@ namespace D2dControl
 
         public static void Destroy()
         {
-            Disposer.SafeDispose(ref _d3DDevice);
-            Disposer.SafeDispose(ref _d3DContext);
             Disposer.SafeDispose(ref _device);
         }
 
@@ -230,7 +208,7 @@ namespace D2dControl
 
         private void InvalidateInternal()
         {
-            if (_d3DSurface == null)
+            if (_d3DSurface is null)
                 return;
 
             try
@@ -294,7 +272,7 @@ namespace D2dControl
             if (IsSoftwareRenderingMode)
                 return;
 
-            if (_d3DSurface == null)
+            if (_d3DSurface is null)
                 return;
 
             if (_d3DSurface.IsFrontBufferAvailable)
@@ -305,7 +283,7 @@ namespace D2dControl
 
         private void StartD3D()
         {
-            _d3DSurface = new Dx11ImageSource(DeviceEx);
+            _d3DSurface = new Dx11ImageSource();
             _d3DSurface.IsFrontBufferAvailableChanged += OnIsFrontBufferAvailableChanged;
 
             CreateAndBindTargets();
@@ -330,7 +308,7 @@ namespace D2dControl
 
         private void CreateAndBindTargets()
         {
-            if (_d3DSurface == null)
+            if (_d3DSurface is null)
                 return;
 
             try
@@ -377,7 +355,7 @@ namespace D2dControl
 
                 using (var surface = _dx11Target.QueryInterface<Surface>())
                 {
-                    _d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties
+                    _d2DRenderTarget = new SharpDX.Direct2D1.DeviceContext(surface, new CreationProperties()
                     {
                         Options = DeviceContextOptions.EnableMultithreadedOptimizations,
                         ThreadingMode = ThreadingMode.SingleThreaded
@@ -408,7 +386,7 @@ namespace D2dControl
 
         private void PrepareAndCallRender()
         {
-            if (_d2DRenderTarget == null)
+            if (_d2DRenderTarget is null)
                 return;
 
             try
@@ -490,22 +468,6 @@ namespace D2dControl
 
             IsSoftwareRenderingMode = false;
         }
-
-        private static PresentParameters GetPresentParameters()
-        {
-            var presentParams = new PresentParameters
-            {
-                Windowed = true,
-                SwapEffect = SwapEffect.Discard,
-                DeviceWindowHandle = GetDesktopWindow(),
-                PresentationInterval = PresentInterval.Default
-            };
-
-            return presentParams;
-        }
-
-        [DllImport("user32.dll", SetLastError = false)]
-        private static extern IntPtr GetDesktopWindow();
 
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once IdentifierTypo
