@@ -430,8 +430,8 @@ namespace D2dControl
         {
             // https://stackoverflow.com/questions/56849171/direct2d-with-wpf-over-rdp
             // https://github.com/Sascha-L/WPF-MediaKit/issues/3
-            // https://docs.microsoft.com/en-us/archive/blogs/wpf3d/d3dimage-and-software-rendering
-            // https://docs.microsoft.com/en-us/dotnet/framework/wpf/graphics-multimedia/graphics-rendering-registry-settings
+            // https://docs.microsoft.com/archive/blogs/wpf3d/d3dimage-and-software-rendering
+            // https://docs.microsoft.com/dotnet/framework/wpf/graphics-multimedia/graphics-rendering-registry-settings
 
             // Rendering tier 
             var renderingTier = RenderCapability.Tier >> 16;
