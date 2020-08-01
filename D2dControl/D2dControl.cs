@@ -449,21 +449,17 @@ namespace D2dControl
             }
 
             // DisableHWAcceleration
-            try
+            var subKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Avalon.Graphics");
+            if (subKey != null)
             {
-                var subKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Avalon.Graphics");
-
-                var d = (int) subKey.GetValue("DisableHWAcceleration");
-                if (d != 0)
+                if (subKey.GetValue("DisableHWAcceleration") is int d)
                 {
-                    IsSoftwareRenderingMode = true;
-                    // ReSharper disable once RedundantJumpStatement
-                    return;
+                    if (d == 1)
+                    {
+                        IsSoftwareRenderingMode = true;
+                        return;
+                    }
                 }
-            }
-            catch
-            {
-                // ignored
             }
 
             IsSoftwareRenderingMode = false;
